@@ -1,31 +1,70 @@
+﻿import { AlarmsProvider } from '../components/AlarmsContext';
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { StatusBar, Text, View, StyleSheet } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { AlarmsProvider } from '../components/AlarmsContext';
-import { COLORS } from '../constants/theme';
-const items = {
- index: { title: 'Inicio', icon: '⌂' },
- reloj: { title: 'Reloj', icon: '◷' },
- alarmas: { title: 'Alarmas', icon: '◴' },
- cronometro: { title: 'Cronómetro', icon: '◉' },
+import { Platform, StyleSheet, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const ITEMS = {
+  index: { title: 'Inicio', icon: 'home-outline', active: 'home' },
+  reloj: { title: 'Reloj', icon: 'time-outline', active: 'time' },
+  alarmas: { title: 'Alarmas', icon: 'alarm-outline', active: 'alarm' },
+  cronometro: { title: 'Cronómetro', icon: 'stopwatch-outline', active: 'stopwatch' },
 };
+
 export default function RootLayout() {
- return <SafeAreaProvider><AlarmsProvider>
-  <StatusBar barStyle="dark-content" backgroundColor={COLORS.bg}/>
-  <Tabs screenOptions={({route})=>({
-    headerShown:false,
-    tabBarActiveTintColor:'#007AFF',tabBarInactiveTintColor:'#9299A5',
-    tabBarLabelStyle:{fontSize:10,fontWeight:'700',marginTop:2},
-    tabBarStyle:{paddingTop:7,paddingBottom:7,backgroundColor:'#FFFFFF',borderTopColor:'#E5E9F0',borderTopWidth:1},
-    tabBarIcon:({focused,color})=><View style={[styles.icon,focused&&styles.selected]}><Text style={{fontSize:25,color,fontWeight:'700'}}>{items[route.name]?.icon||'◷'}</Text></View>,
-    sceneStyle:{backgroundColor:COLORS.bg}
-  })}>
-    <Tabs.Screen name="index" options={{title:'Inicio'}}/>
-    <Tabs.Screen name="reloj" options={{title:'Reloj'}}/>
-    <Tabs.Screen name="alarmas" options={{title:'Alarmas'}}/>
-    <Tabs.Screen name="cronometro" options={{title:'Cronómetro'}}/>
-  </Tabs>
- </AlarmsProvider></SafeAreaProvider>
+  const insets = useSafeAreaInsets();
+  const bottom = Math.max(insets.bottom, 10);
+
+  return ( <AlarmsProvider><Tabs
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarActiveTintColor: '#347FE8',
+        tabBarInactiveTintColor: '#8994A3',
+        tabBarHideOnKeyboard: true,
+        tabBarStyle: {
+          height: 62 + bottom,
+          paddingTop: 8,
+          paddingBottom: bottom,
+          backgroundColor: '#FFFFFF',
+          borderTopColor: '#E8ECF2',
+          borderTopWidth: StyleSheet.hairlineWidth,
+          elevation: 8,
+        },
+        tabBarItemStyle: {
+          paddingVertical: 2,
+        },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '600',
+          marginTop: 2,
+        },
+        tabBarIcon: ({ focused, color }) => {
+          const item = ITEMS[route.name];
+          if (!item) return null;
+          return (
+            <View style={{
+              width: 58,
+              height: 32,
+              borderRadius: 13,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: focused ? '#E9F2FF' : 'transparent',
+            }}>
+              <Ionicons
+                name={focused ? item.active : item.icon}
+                size={21}
+                color={color}
+              />
+            </View>
+          );
+        },
+      })}
+    >
+      <Tabs.Screen name="index" options={{ title: 'Inicio' }} />
+      <Tabs.Screen name="reloj" options={{ title: 'Reloj' }} />
+      <Tabs.Screen name="alarmas" options={{ title: 'Alarmas' }} />
+      <Tabs.Screen name="cronometro" options={{ title: 'Cronómetro' }} />
+    </Tabs></AlarmsProvider> );
 }
-const styles=StyleSheet.create({icon:{width:48,height:32,alignItems:'center',justifyContent:'center',borderRadius:14},selected:{backgroundColor:'#EAF2FF'}});
+

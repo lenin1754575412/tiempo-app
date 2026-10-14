@@ -1,0 +1,258 @@
+﻿import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  StatusBar,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+export default function Inicio() {
+  const [ahora, setAhora] = useState(new Date());
+
+  useEffect(() => {
+    const intervalo = setInterval(() => setAhora(new Date()), 1000);
+    return () => clearInterval(intervalo);
+  }, []);
+
+  const hora = ahora.getHours();
+
+  const saludo =
+    hora < 12 ? 'Buenos días' :
+    hora < 18 ? 'Buenas tardes' :
+    'Buenas noches';
+
+  const horaTexto = ahora.toLocaleTimeString('es-PE', {
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+
+  const fechaTexto = ahora.toLocaleDateString('es-PE', {
+    day: 'numeric',
+    month: 'long',
+  }).toUpperCase();
+
+  return (
+    <SafeAreaView style={styles.root} edges={['top']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#F4F6FA" />
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.contenido}
+      >
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.etiqueta}>TU ESPACIO PERSONAL</Text>
+            <Text style={styles.logo}>
+              Tiempo<Text style={styles.punto}>.</Text>
+            </Text>
+          </View>
+
+          <View style={styles.headerIcon}>
+            <Ionicons name="time-outline" size={23} color="#357FD8" />
+          </View>
+        </View>
+
+        <View style={styles.hero}>
+          <Text style={styles.fecha}>HOY · {fechaTexto}</Text>
+
+          <Text style={styles.saludo}>{saludo} ✨</Text>
+
+          <Text style={styles.descripcion}>
+            Cada momento cuenta. Haz que hoy sea un gran día.
+          </Text>
+
+          <View style={styles.horaFila}>
+            <Text style={styles.reloj}>{horaTexto}</Text>
+
+            </View>
+        </View>
+
+        <View style={styles.mensaje}>
+          <View style={styles.mensajeTitulo}>
+            <Ionicons name="sparkles-outline" size={23} color="#367DC8" />
+            <Text style={styles.mensajeHeading}>Un día a la vez</Text>
+          </View>
+
+          <Text style={styles.mensajeDescripcion}>
+            Organiza tu tiempo a tu manera. Cada segundo es una
+            nueva oportunidad para hacer algo increíble.
+          </Text>
+        </View>
+
+        <View style={styles.tarjeta}>
+          <Text style={styles.tarjetaEtiqueta}>TU MENSAJE DEL DÍA</Text>
+
+          <Text style={styles.tarjetaTitulo}>
+            Haz que cada momento cuente.
+          </Text>
+
+          <Text style={styles.tarjetaDescripcion}>
+            Disfruta tu día, avanza a tu ritmo y concéntrate
+            en lo que realmente importa.
+          </Text>
+        </View>
+
+        <Text style={styles.footer}>TIEMPO.APP · TU ESPACIO PERSONAL</Text>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: '#F4F6FA',
+  },
+  contenido: {
+    paddingHorizontal: 24,
+    paddingTop: 15,
+    paddingBottom: 35,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  etiqueta: {
+    fontSize: 10,
+    letterSpacing: 3,
+    color: '#8B96A5',
+    fontWeight: '600',
+  },
+  logo: {
+    fontSize: 39,
+    fontWeight: '300',
+    color: '#17253A',
+    marginTop: 7,
+  },
+  punto: {
+    color: '#3888EA',
+  },
+  headerIcon: {
+    width: 58,
+    height: 58,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E7F0FF',
+  },
+  hero: {
+    backgroundColor: '#1C2C53',
+    borderRadius: 30,
+    padding: 28,
+    minHeight: 270,
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  fecha: {
+    color: '#A8BCDE',
+    fontSize: 11,
+    letterSpacing: 2.4,
+    fontWeight: '600',
+  },
+  saludo: {
+    color: '#FFFFFF',
+    fontSize: 30,
+    fontWeight: '400',
+    marginTop: 25,
+  },
+  descripcion: {
+    color: '#C5D1E7',
+    fontSize: 15,
+    lineHeight: 24,
+    marginTop: 8,
+  },
+  horaFila: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 35,
+  },
+  reloj: {
+    fontSize: 32,
+    color: '#FFFFFF',
+    fontWeight: '300',
+    fontVariant: ['tabular-nums'],
+  },
+  enVivo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#31476F',
+    borderRadius: 25,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  puntoVerde: {
+    width: 7,
+    height: 7,
+    borderRadius: 7,
+    backgroundColor: '#83EDBD',
+    marginRight: 6,
+  },
+  enVivoTexto: {
+    color: '#AAF1D4',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  mensaje: {
+    backgroundColor: '#E7F1FF',
+    borderRadius: 25,
+    padding: 23,
+    marginBottom: 18,
+  },
+  mensajeTitulo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  mensajeHeading: {
+    fontSize: 19,
+    fontWeight: '600',
+    color: '#274B80',
+  },
+  mensajeDescripcion: {
+    color: '#5C7190',
+    lineHeight: 23,
+    fontSize: 14,
+    marginTop: 12,
+  },
+  tarjeta: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: '#E6EAF0',
+  },
+  tarjetaEtiqueta: {
+    fontSize: 10,
+    letterSpacing: 2,
+    color: '#8A97A8',
+    fontWeight: '700',
+    marginBottom: 13,
+  },
+  tarjetaTitulo: {
+    fontSize: 20,
+    color: '#1A2A40',
+    fontWeight: '600',
+  },
+  tarjetaDescripcion: {
+    fontSize: 14,
+    lineHeight: 23,
+    color: '#8190A2',
+    marginTop: 10,
+  },
+  footer: {
+    textAlign: 'center',
+    marginTop: 35,
+    fontSize: 10,
+    letterSpacing: 1.5,
+    color: '#A8B2C0',
+  },
+});
+

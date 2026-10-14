@@ -1,0 +1,480 @@
+﻿import React, { useEffect, useState } from 'react';
+import {
+  View, Text, TextInput, TouchableOpacity,
+  ScrollView, StyleSheet, Alert, Modal,
+  Platform, StatusBar,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
+
+const STORAGE_KEY = '@tiempo_app_alarmas_v2';
+const CHANNEL = 'tiempo-alarmas-v1';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
+function convertirFecha(fecha, hora) {
+  const partes = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(fecha.trim());
+  const tiempo = /^(\d{2}):(\d{2})$/.exec(hora.trim());
+
+  if (!partes || !tiempo) return null;
+
+  const dia = Number(partes[1]);
+  const mes = Number(partes[2]);
+  const anio = Number(partes[3]);
+  const horas = Number(tiempo[1]);
+  const minutos = Number(tiempo[2]);
+
+  if (anio < 2020 || anio > 2100 || horas > 23 || minutos > 59) {
+    return null;
+  }
+
+  const resultado = new Date(anio, mes - 1, dia, horas, minutos);
+
+  if (
+    resultado.getFullYear() !== anio ||
+    resultado.getMonth() !== mes - 1 ||
+    resultado.getDate() !== dia
+  ) return null;
+
+  return resultado;
+}
+
+async function prepararNotificaciones() {
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync(CHANNEL, {
+      name: 'Alarmas TIEMPO.APP',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 400, 200, 400],
+      lightColor: '#7C5CCE',
+      sound: 'default',
+      enableVibrate: true,
+    });
+  }
+
+  let permiso = await Notifications.getPermissionsAsync();
+
+  if (!permiso.granted) {
+    permiso = await Notifications.requestPermissionsAsync();
+  }
+
+  return permiso.granted;
+}
+
+async function programarAlarma(fecha, titulo) {
+  const permitido = await prepararNotificaciones();
+
+  if (!permitido) {
+    throw new Error('Debes permitir las notificaciones de TIEMPO.APP.');
+  }
+
+  return await Notifications.scheduleNotificationAsync({
+    content: {
+      title: '⏰ ' + titulo,
+      body: '¡Llegó la hora de tu alarma!',
+      sound: 'default',
+      priority: Notifications.AndroidNotificationPriority.MAX,
+      data: { tipo: 'alarma-tiempo' },
+    },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date: fecha,
+      ...(Platform.OS === 'android' ? { channelId: CHANNEL } : {}),
+    },
+  });
+}
+
+function Boton({ texto, onPress, color = '#785ACF', outlined = false }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      style={[
+        styles.boton,
+        {
+          backgroundColor: outlined ? '#FFFFFF' : color,
+          borderWidth: outlined ? 1 : 0,
+          borderColor: '#CBD3DD',
+        },
+      ]}
+    >
+      <Text style={{
+        color: outlined ? '#607184' : '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '600',
+      }}>
+        {texto}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+export default function AlarmasScreen() {
+  const [alarmas, setAlarmas] = useState([]);
+  const [listo, setListo] = useState(false);
+  const [modal, setModal] = useState(false);
+  const [editando, setEditando] = useState(null);
+  const [fecha, setFecha] = useState('');
+  const [hora, setHora] = useState('');
+  const [titulo, setTitulo] = useState('Mi alarma');
+  const [guardando, setGuardando] = useState(false);
+
+  useEffect(() => {
+    let activo = true;
+
+    async function cargar() {
+      try {
+        const guardadas = await AsyncStorage.getItem(STORAGE_KEY);
+        if (guardadas && activo) {
+          const datos = JSON.parse(guardadas);
+          if (Array.isArray(datos)) setAlarmas(datos);
+        }
+      } catch (error) {
+        Alert.alert('Error', 'No se pudieron cargar las alarmas.');
+      } finally {
+        if (activo) setListo(true);
+      }
+    }
+
+    cargar();
+    prepararNotificaciones().catch(() => {});
+
+    return () => { activo = false; };
+  }, []);
+
+  async function persistir(nuevas) {
+    const ordenadas = [...nuevas].sort((a, b) => a.timestamp - b.timestamp);
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(ordenadas));
+    setAlarmas(ordenadas);
+  }
+
+  function abrirNueva() {
+    const proxima = new Date(Date.now() + 120000);
+    setEditando(null);
+    setFecha(
+      String(proxima.getDate()).padStart(2, '0') + '/' +
+      String(proxima.getMonth() + 1).padStart(2, '0') + '/' +
+      proxima.getFullYear()
+    );
+    setHora(
+      String(proxima.getHours()).padStart(2, '0') + ':' +
+      String(proxima.getMinutes()).padStart(2, '0')
+    );
+    setTitulo('Mi alarma');
+    setModal(true);
+  }
+
+  function abrirEdicion(item) {
+    setEditando(item);
+    setFecha(item.fecha);
+    setHora(item.hora);
+    setTitulo(item.titulo);
+    setModal(true);
+  }
+
+  async function guardar() {
+    if (guardando) return;
+
+    const destino = convertirFecha(fecha, hora);
+
+    if (!destino) {
+      Alert.alert('Fecha incorrecta', 'Escribe DD/MM/AAAA y HH:mm.');
+      return;
+    }
+
+    if (destino.getTime() <= Date.now()) {
+      Alert.alert('Hora inválida', 'Selecciona una fecha y hora futuras.');
+      return;
+    }
+
+    const duplicada = alarmas.some(
+      a => a.timestamp === destino.getTime() && a.id !== editando?.id
+    );
+
+    if (duplicada) {
+      Alert.alert('Duplicada', 'Ya tienes una alarma para esa fecha y hora.');
+      return;
+    }
+
+    setGuardando(true);
+
+    try {
+      const nombre = titulo.trim() || 'Mi alarma';
+
+      const notificationId = await programarAlarma(destino, nombre);
+
+      const item = {
+        id: editando?.id || String(Date.now()),
+        fecha,
+        hora,
+        titulo: nombre,
+        timestamp: destino.getTime(),
+        notificationId,
+      };
+
+      const nuevas = editando
+        ? alarmas.map(a => a.id === editando.id ? item : a)
+        : [...alarmas, item];
+
+      try {
+        await persistir(nuevas);
+      } catch (error) {
+        await Notifications.cancelScheduledNotificationAsync(notificationId)
+          .catch(() => {});
+        throw error;
+      }
+
+      if (editando?.notificationId) {
+        await Notifications.cancelScheduledNotificationAsync(
+          editando.notificationId
+        ).catch(() => {});
+      }
+
+      setModal(false);
+      Alert.alert('Alarma guardada', 'La notificación ha sido programada.');
+    } catch (error) {
+      Alert.alert('No se pudo guardar', error.message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  function eliminar(item) {
+    Alert.alert('Eliminar alarma', '¿Deseas eliminar esta alarma?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const nuevas = alarmas.filter(a => a.id !== item.id);
+            await persistir(nuevas);
+            if (item.notificationId) {
+              await Notifications.cancelScheduledNotificationAsync(
+                item.notificationId
+              );
+            }
+          } catch (error) {
+            Alert.alert('Error', 'No se pudo eliminar completamente la alarma.');
+          }
+        },
+      },
+    ]);
+  }
+
+  async function probar() {
+    try {
+      const permitido = await prepararNotificaciones();
+
+      if (!permitido) {
+        Alert.alert('Permisos', 'Activa las notificaciones en Ajustes.');
+        return;
+      }
+
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: '⏰ Prueba de TIEMPO.APP',
+          body: 'Tu sistema de notificaciones está funcionando.',
+          sound: 'default',
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: 5,
+          ...(Platform.OS === 'android' ? { channelId: CHANNEL } : {}),
+        },
+      });
+
+      Alert.alert('Prueba enviada', 'Espera 5 segundos.');
+    } catch (error) {
+      Alert.alert('Error de prueba', error.message);
+    }
+  }
+
+  return (
+    <SafeAreaView style={styles.root} edges={['top']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#F4F6FA" />
+
+      <ScrollView contentContainerStyle={styles.contenido}>
+        <Text style={styles.etiqueta}>HERRAMIENTA 2</Text>
+        <Text style={styles.heading}>Mis alarmas</Text>
+        <Text style={styles.subtitulo}>
+          Organiza tus recordatorios y recibe notificaciones.
+        </Text>
+
+        <View style={styles.resumen}>
+          <Text style={styles.resumenEtiqueta}>ALARMAS REGISTRADAS</Text>
+          <Text style={styles.numero}>{alarmas.length}</Text>
+          <Ionicons name="alarm-outline" size={35} color="#B7A4FB"
+            style={{ position: 'absolute', right: 25, bottom: 32 }} />
+        </View>
+
+        <Boton texto="+ Agregar alarma" onPress={abrirNueva} />
+
+        <View style={styles.seccion}>
+          <Text style={styles.tituloSeccion}>Mis alarmas</Text>
+          <Text style={styles.subtitulo}>Ordenadas por fecha y hora</Text>
+        </View>
+
+        {!listo ? (
+          <Text style={styles.vacioTexto}>Cargando alarmas...</Text>
+        ) : alarmas.length === 0 ? (
+          <View style={styles.vacio}>
+            <Ionicons name="alarm-outline" size={45} color="#8A9AAC" />
+            <Text style={styles.vacioTitulo}>Aún no tienes alarmas</Text>
+            <Text style={styles.vacioTexto}>
+              Pulsa Agregar alarma e indica una fecha y hora futuras.
+            </Text>
+          </View>
+        ) : alarmas.map(item => (
+          <View key={item.id} style={styles.alarma}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.horaAlarma}>{item.hora}</Text>
+              <Text style={styles.nombreAlarma}>{item.titulo}</Text>
+              <Text style={styles.fechaAlarma}>{item.fecha}</Text>
+              {item.timestamp <= Date.now() && (
+                <Text style={styles.vencida}>Fecha cumplida</Text>
+              )}
+            </View>
+
+            <TouchableOpacity onPress={() => abrirEdicion(item)}
+              style={styles.accion}>
+              <Ionicons name="create-outline" size={23} color="#4D8DDF" />
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => eliminar(item)}
+              style={styles.accion}>
+              <Ionicons name="trash-outline" size={23} color="#E46974" />
+            </TouchableOpacity>
+          </View>
+        ))}
+
+        <View style={{ marginTop: 24 }}>
+          <Boton texto="🔔 Probar notificación (5 segundos)"
+            onPress={probar} color="#22334E" />
+        </View>
+
+        <Text style={styles.nota}>
+          Las alarmas se guardan en tu dispositivo. El sonido y la
+          puntualidad dependen de los permisos y ajustes de Android.
+        </Text>
+      </ScrollView>
+
+      <Modal visible={modal} transparent animationType="fade"
+        onRequestClose={() => setModal(false)}>
+        <View style={styles.overlay}>
+          <View style={styles.modalBox}>
+            <ScrollView keyboardShouldPersistTaps="handled">
+              <Text style={styles.modalTitulo}>
+                {editando ? 'Editar alarma' : 'Nueva alarma'}
+              </Text>
+              <Text style={styles.subtitulo}>
+                Programa una notificación con fecha y hora.
+              </Text>
+
+              <Text style={styles.inputLabel}>NOMBRE</Text>
+              <TextInput style={styles.input} value={titulo}
+                onChangeText={setTitulo} placeholder="Mi alarma"
+                maxLength={50} />
+
+              <Text style={styles.inputLabel}>FECHA (DD/MM/AAAA)</Text>
+              <TextInput style={styles.input} value={fecha}
+                onChangeText={setFecha} placeholder="13/10/2026"
+                keyboardType="numbers-and-punctuation" maxLength={10} />
+
+              <Text style={styles.inputLabel}>HORA (HH:mm)</Text>
+              <TextInput style={styles.input} value={hora}
+                onChangeText={setHora} placeholder="20:30"
+                keyboardType="numbers-and-punctuation" maxLength={5} />
+
+              <View style={styles.info}>
+                <Text style={styles.infoTexto}>
+                  ✓ Fecha y hora futuras
+                </Text>
+                <Text style={styles.infoTexto}>
+                  ✓ Sin alarmas duplicadas
+                </Text>
+                <Text style={styles.infoTexto}>
+                  ✓ Notificación local programada
+                </Text>
+              </View>
+
+              <Boton texto={guardando ? 'Guardando...' : 'Guardar alarma'}
+                onPress={guardar} />
+              <View style={{ height: 12 }} />
+              <Boton texto="Cancelar" outlined
+                onPress={() => setModal(false)} />
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: '#F4F6FA' },
+  contenido: { paddingHorizontal: 24, paddingTop: 15, paddingBottom: 45 },
+  etiqueta: { fontSize: 11, color: '#438BDD', letterSpacing: 2, fontWeight: '700' },
+  heading: { fontSize: 34, fontWeight: '400', color: '#19293B', marginTop: 12 },
+  subtitulo: { fontSize: 13, color: '#8D9AA9', lineHeight: 22, marginTop: 5 },
+  resumen: {
+    backgroundColor: '#282447', borderRadius: 24,
+    padding: 27, marginTop: 30, marginBottom: 20, minHeight: 155,
+  },
+  resumenEtiqueta: { color: '#D5CFE9', fontSize: 12, letterSpacing: 1.5 },
+  numero: { fontSize: 55, color: '#FFFFFF', fontWeight: '300', marginTop: 12 },
+  boton: {
+    minHeight: 60, borderRadius: 17, justifyContent: 'center',
+    alignItems: 'center', paddingHorizontal: 12,
+  },
+  seccion: { marginTop: 30, marginBottom: 20 },
+  tituloSeccion: { fontSize: 25, color: '#1B2938' },
+  vacio: {
+    borderRadius: 23, backgroundColor: '#FFFFFF',
+    borderWidth: 1, borderColor: '#E0E5EC',
+    alignItems: 'center', padding: 32, gap: 15,
+  },
+  vacioTitulo: { fontSize: 20, color: '#1C293A', fontWeight: '600' },
+  vacioTexto: { textAlign: 'center', color: '#91A0AD', lineHeight: 23 },
+  alarma: {
+    backgroundColor: '#FFFFFF', borderRadius: 20, padding: 18,
+    marginBottom: 12, flexDirection: 'row', alignItems: 'center',
+    borderWidth: 1, borderColor: '#E7EBF1',
+  },
+  horaAlarma: { fontSize: 28, color: '#17283D', fontWeight: '500' },
+  nombreAlarma: { color: '#42566D', fontSize: 15, marginTop: 4 },
+  fechaAlarma: { color: '#8C9BAA', fontSize: 12, marginTop: 4 },
+  vencida: { color: '#DD7855', fontSize: 11, marginTop: 5 },
+  accion: { padding: 9 },
+  nota: { color: '#94A0AE', lineHeight: 20, marginTop: 22, fontSize: 12 },
+  overlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.67)',
+    justifyContent: 'center', paddingHorizontal: 18,
+  },
+  modalBox: {
+    backgroundColor: '#FFFFFF', borderRadius: 28,
+    padding: 24, maxHeight: '85%',
+  },
+  modalTitulo: { fontSize: 26, color: '#1B2B3E', marginBottom: 10 },
+  inputLabel: {
+    fontSize: 11, color: '#738393', fontWeight: '700',
+    letterSpacing: 1.2, marginTop: 20, marginBottom: 9,
+  },
+  input: {
+    backgroundColor: '#F4F6FA', borderRadius: 15, height: 57,
+    paddingHorizontal: 17, fontSize: 17, color: '#182B40',
+    borderWidth: 1, borderColor: '#E1E6EC',
+  },
+  info: {
+    backgroundColor: '#203548', borderRadius: 16,
+    padding: 17, marginVertical: 23, gap: 7,
+  },
+  infoTexto: { fontSize: 12, color: '#D7E2ED' },
+});

@@ -1,15 +1,260 @@
-import React,{useEffect,useState} from 'react';
-import {useRouter} from 'expo-router';
-import {ScrollView,View,Text,Pressable,StyleSheet} from 'react-native';
-import {COLORS,SHADOW} from '../constants/theme';
-const links=[['◷','Reloj digital','Hora y fecha en tiempo real','/reloj','#007AFF'],['◴','Mis alarmas','Organiza tus recordatorios','/alarmas','#AF74E8'],['◉','Cronómetro','Mide cada segundo','/cronometro','#26B28D']];
-export default function Home(){const router=useRouter();const [date,setDate]=useState(new Date());useEffect(()=>{const id=setInterval(()=>setDate(new Date()),1000);return()=>clearInterval(id)},[]);
-const hour=date.getHours();const hello=hour<12?'Buenos días':hour<18?'Buenas tardes':'Buenas noches';
-return <ScrollView style={s.page} contentContainerStyle={s.body} showsVerticalScrollIndicator={false}>
-<View style={s.top}><View><Text style={s.eyebrow}>TU ESPACIO PERSONAL</Text><Text style={s.brand}>Tiempo<Text style={{color:COLORS.cyan}}>.</Text></Text></View><View style={s.avatar}><Text style={{fontSize:24}}>◷</Text></View></View>
-<View style={s.hero}><Text style={s.heroLabel}>HOY · {date.toLocaleDateString('es-PE',{day:'numeric',month:'long'}).toUpperCase()}</Text><Text style={s.hello}>{hello} ✨</Text><Text style={s.heroSubtitle}>Cada momento cuenta. Haz que hoy sea un gran día.</Text><View style={s.clockRow}><Text style={s.time}>{date.toLocaleTimeString('es-PE',{hour12:false})}</Text><View style={s.live}><Text style={s.liveText}>● EN VIVO</Text></View></View></View>
-<View style={s.section}><Text style={s.heading}>Tus herramientas</Text><Text style={s.count}>03 disponibles</Text></View>
-{links.map(([icon,title,subtitle,path,color])=><Pressable key={path} onPress={()=>router.push(path)} style={({pressed})=>[s.card,pressed&&{opacity:.7}]}><View style={[s.icon,{backgroundColor:color+'16'}]}><Text style={{color,fontSize:29,fontWeight:'600'}}>{icon}</Text></View><View style={{flex:1}}><Text style={s.title}>{title}</Text><Text style={s.subtitle}>{subtitle}</Text></View><Text style={s.chevron}>›</Text></Pressable>)}
-<View style={s.tip}><Text style={{fontSize:23}}>✦</Text><View style={{flex:1}}><Text style={s.tipTitle}>Un día a la vez</Text><Text style={s.tipText}>Organiza tu tiempo a tu manera.</Text></View></View><Text style={s.footer}>TIEMPO.APP · DISEÑADO PARA TI</Text>
-</ScrollView>}
-const s=StyleSheet.create({page:{flex:1,backgroundColor:COLORS.bg},body:{paddingHorizontal:23,paddingTop:22,paddingBottom:40},top:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:25},eyebrow:{fontSize:10,fontWeight:'700',letterSpacing:2,color:COLORS.muted,marginBottom:5},brand:{fontSize:35,fontWeight:'800',letterSpacing:-1.5,color:COLORS.text},avatar:{height:49,width:49,borderRadius:18,backgroundColor:'#E4EFFF',alignItems:'center',justifyContent:'center'},hero:{borderRadius:30,backgroundColor:'#162B55',padding:25,marginBottom:32,...SHADOW},heroLabel:{color:'#9ABDF8',fontSize:10,fontWeight:'800',letterSpacing:1.8},hello:{color:'white',fontSize:29,fontWeight:'800',marginTop:18,letterSpacing:-.6},heroSubtitle:{color:'#C9D7EF',fontSize:13,lineHeight:21,marginTop:9},clockRow:{marginTop:28,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},time:{fontSize:33,fontWeight:'700',color:'white',fontVariant:['tabular-nums']},live:{backgroundColor:'#2C4876',paddingVertical:8,paddingHorizontal:10,borderRadius:14},liveText:{color:'#90F0CE',fontSize:9,fontWeight:'800'},section:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:15},heading:{fontSize:22,fontWeight:'800',color:COLORS.text},count:{fontSize:11,color:COLORS.muted},card:{backgroundColor:'white',borderRadius:22,flexDirection:'row',alignItems:'center',padding:16,marginBottom:12,borderColor:COLORS.border,borderWidth:1,...SHADOW},icon:{width:56,height:56,borderRadius:17,alignItems:'center',justifyContent:'center',marginRight:15},title:{fontSize:16,fontWeight:'800',color:COLORS.text},subtitle:{fontSize:12,color:COLORS.muted,marginTop:5},chevron:{fontSize:30,color:'#B6C0CF',paddingHorizontal:5},tip:{flexDirection:'row',gap:14,alignItems:'center',padding:20,backgroundColor:'#E7F0FF',borderRadius:22,marginTop:18},tipTitle:{color:'#2458A5',fontWeight:'800',fontSize:14},tipText:{color:'#59749B',fontSize:12,marginTop:3},footer:{textAlign:'center',fontSize:10,color:'#A1ADBE',letterSpacing:1.4,marginTop:30}});
+﻿import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  StatusBar,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+export default function Inicio() {
+  const [ahora, setAhora] = useState(new Date());
+
+  useEffect(() => {
+    const intervalo = setInterval(() => setAhora(new Date()), 1000);
+    return () => clearInterval(intervalo);
+  }, []);
+
+  const hora = ahora.getHours();
+
+  const saludo =
+    hora < 12 ? 'Buenos días' :
+    hora < 18 ? 'Buenas tardes' :
+    'Buenas noches';
+
+  const horaTexto = ahora.toLocaleTimeString('es-PE', {
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+
+  const fechaTexto = ahora.toLocaleDateString('es-PE', {
+    day: 'numeric',
+    month: 'long',
+  }).toUpperCase();
+
+  return (
+    <SafeAreaView style={styles.root} edges={['top']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#F4F6FA" />
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.contenido}
+      >
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.etiqueta}>TU ESPACIO PERSONAL</Text>
+            <Text style={styles.logo}>
+              Parcial App<Text style={styles.punto}>.</Text>
+            </Text>
+          </View>
+
+          <View style={styles.headerIcon}>
+            <Ionicons name="time-outline" size={23} color="#357FD8" />
+          </View>
+        </View>
+
+        <View style={styles.hero}>
+          <Text style={styles.fecha}>HOY · {fechaTexto}</Text>
+
+          <Text style={styles.saludo}>{saludo} ✨</Text>
+
+          <Text style={styles.descripcion}>
+            Cada momento cuenta. Haz que hoy sea un gran día.
+          </Text>
+
+          <View style={styles.horaFila}>
+            <Text style={styles.reloj}>{horaTexto}</Text>
+
+            </View>
+        </View>
+
+        <View style={styles.mensaje}>
+          <View style={styles.mensajeTitulo}>
+            <Ionicons name="sparkles-outline" size={23} color="#367DC8" />
+            <Text style={styles.mensajeHeading}>Un día a la vez</Text>
+          </View>
+
+          <Text style={styles.mensajeDescripcion}>
+            Organiza tu tiempo a tu manera. Cada segundo es una
+            nueva oportunidad para hacer algo increíble.
+          </Text>
+        </View>
+
+        <View style={styles.tarjeta}>
+          <Text style={styles.tarjetaEtiqueta}>TU MENSAJE DEL DÍA</Text>
+
+          <Text style={styles.tarjetaTitulo}>
+            Haz que cada momento cuente.
+          </Text>
+
+          <Text style={styles.tarjetaDescripcion}>
+            Disfruta tu día, avanza a tu ritmo y concéntrate
+            en lo que realmente importa.
+          </Text>
+        </View>
+
+        <Text style={styles.footer}>PARCIAL APP · TU ESPACIO PERSONAL</Text>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: '#F4F6FA',
+  },
+  contenido: {
+    paddingHorizontal: 24,
+    paddingTop: 15,
+    paddingBottom: 35,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  etiqueta: {
+    fontSize: 10,
+    letterSpacing: 3,
+    color: '#8B96A5',
+    fontWeight: '600',
+  },
+  logo: {
+    fontSize: 39,
+    fontWeight: '300',
+    color: '#17253A',
+    marginTop: 7,
+  },
+  punto: {
+    color: '#3888EA',
+  },
+  headerIcon: {
+    width: 58,
+    height: 58,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E7F0FF',
+  },
+  hero: {
+    backgroundColor: '#1C2C53',
+    borderRadius: 30,
+    padding: 28,
+    minHeight: 270,
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  fecha: {
+    color: '#A8BCDE',
+    fontSize: 11,
+    letterSpacing: 2.4,
+    fontWeight: '600',
+  },
+  saludo: {
+    color: '#FFFFFF',
+    fontSize: 30,
+    fontWeight: '400',
+    marginTop: 25,
+  },
+  descripcion: {
+    color: '#C5D1E7',
+    fontSize: 15,
+    lineHeight: 24,
+    marginTop: 8,
+  },
+  horaFila: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 35,
+  },
+  reloj: {
+    fontSize: 32,
+    color: '#FFFFFF',
+    fontWeight: '300',
+    fontVariant: ['tabular-nums'],
+  },
+  enVivo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#31476F',
+    borderRadius: 25,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  puntoVerde: {
+    width: 7,
+    height: 7,
+    borderRadius: 7,
+    backgroundColor: '#83EDBD',
+    marginRight: 6,
+  },
+  enVivoTexto: {
+    color: '#AAF1D4',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  mensaje: {
+    backgroundColor: '#E7F1FF',
+    borderRadius: 25,
+    padding: 23,
+    marginBottom: 18,
+  },
+  mensajeTitulo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  mensajeHeading: {
+    fontSize: 19,
+    fontWeight: '600',
+    color: '#274B80',
+  },
+  mensajeDescripcion: {
+    color: '#5C7190',
+    lineHeight: 23,
+    fontSize: 14,
+    marginTop: 12,
+  },
+  tarjeta: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: '#E6EAF0',
+  },
+  tarjetaEtiqueta: {
+    fontSize: 10,
+    letterSpacing: 2,
+    color: '#8A97A8',
+    fontWeight: '700',
+    marginBottom: 13,
+  },
+  tarjetaTitulo: {
+    fontSize: 20,
+    color: '#1A2A40',
+    fontWeight: '600',
+  },
+  tarjetaDescripcion: {
+    fontSize: 14,
+    lineHeight: 23,
+    color: '#8190A2',
+    marginTop: 10,
+  },
+  footer: {
+    textAlign: 'center',
+    marginTop: 35,
+    fontSize: 10,
+    letterSpacing: 1.5,
+    color: '#A8B2C0',
+  },
+});
+
+
+

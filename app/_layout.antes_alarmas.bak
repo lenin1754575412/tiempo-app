@@ -1,0 +1,70 @@
+﻿import React from 'react';
+import { Tabs } from 'expo-router';
+import { Platform, StyleSheet, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const ITEMS = {
+  index: { title: 'Inicio', icon: 'home-outline', active: 'home' },
+  reloj: { title: 'Reloj', icon: 'time-outline', active: 'time' },
+  alarmas: { title: 'Alarmas', icon: 'alarm-outline', active: 'alarm' },
+  cronometro: { title: 'Cronómetro', icon: 'stopwatch-outline', active: 'stopwatch' },
+};
+
+export default function RootLayout() {
+  const insets = useSafeAreaInsets();
+  const bottom = Math.max(insets.bottom, 10);
+
+  return (
+    <Tabs
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarActiveTintColor: '#347FE8',
+        tabBarInactiveTintColor: '#8994A3',
+        tabBarHideOnKeyboard: true,
+        tabBarStyle: {
+          height: 62 + bottom,
+          paddingTop: 8,
+          paddingBottom: bottom,
+          backgroundColor: '#FFFFFF',
+          borderTopColor: '#E8ECF2',
+          borderTopWidth: StyleSheet.hairlineWidth,
+          elevation: 8,
+        },
+        tabBarItemStyle: {
+          paddingVertical: 2,
+        },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '600',
+          marginTop: 2,
+        },
+        tabBarIcon: ({ focused, color }) => {
+          const item = ITEMS[route.name];
+          if (!item) return null;
+          return (
+            <View style={{
+              width: 58,
+              height: 32,
+              borderRadius: 13,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: focused ? '#E9F2FF' : 'transparent',
+            }}>
+              <Ionicons
+                name={focused ? item.active : item.icon}
+                size={21}
+                color={color}
+              />
+            </View>
+          );
+        },
+      })}
+    >
+      <Tabs.Screen name="index" options={{ title: 'Inicio' }} />
+      <Tabs.Screen name="reloj" options={{ title: 'Reloj' }} />
+      <Tabs.Screen name="alarmas" options={{ title: 'Alarmas' }} />
+      <Tabs.Screen name="cronometro" options={{ title: 'Cronómetro' }} />
+    </Tabs>
+  );
+}
